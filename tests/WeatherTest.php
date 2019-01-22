@@ -17,6 +17,25 @@ use Sssword\Weather\Exceptions\InvalidArgumentException;
  */
 class WeatherTest extends TestCase
 {
+    // 实时天气异常测试
+    public function testGetLiveWeather()
+    {
+        // `getWeather` 模拟为返回固定内容，测试参数是否正确传递
+        $w = \Mockery::mock(Weather::class, ['mock-key'])->makePartial();
+        $w->expects()->getWeather('230100', 'base', 'json')->andReturn(['success' => true]);
+
+        // 断言参数正确传递并返回
+        $this->assertSame(['success' => true], $w->getLiveWeather('230100'));
+    }
+
+    // 预报天气异常测试
+    public function testGetForecastsWeather()
+    {
+        $w = \Mockery::mock(Weather::class, ['mock-key'])->makePartial();
+        $w->expects()->getWeather('230100', 'all', 'json')->andReturn(['success' => true]);
+
+        $this->assertSame(['success' => true], $w->GetForecastsWeather('230100'));
+    }
 
     // 异常测试，检查$type 参数
     public function testGetWeatherWithInvalidType()
@@ -27,22 +46,22 @@ class WeatherTest extends TestCase
         // 断言消息
         $this->expectExceptionMessage('Invalid type value(base/all): foo');
         // 传入 array 会抛出异常
-        $w->getWeather('哈尔滨', 'foo');
+        $w->getWeather('230100', 'foo');
         // 如果没有抛出异常，就会运行到这行，标记当前测试失败！
-        $this->fail('断言 $type 参数异常失败！');
+        $this->fail('断言 type 参数异常失败！');
     }
 
     // 异常测试，检查$format 参数
     public function testGetWeatherWithInvalidFormat()
     {
         $w = new Weather('mock-key');
-        $this->expectException(InvalidArgumentException::class);
 
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid response format: array');
 
-        $w->getWeather('哈尔滨', 'base', 'array');
+        $w->getWeather('230100', 'base', 'array');
 
-        $this->fail('断言 $format 参数异常失败！');
+        $this->fail('断言 format 参数异常失败！');
     }
 
     // 请求异常测试
@@ -59,48 +78,44 @@ class WeatherTest extends TestCase
         $this->expectException(HttpException::class);
         $this->expectExceptionMessage('request timeout');
 
-        $w->getWeather('哈尔滨');
+        $w->getWeather('230100');
     }
 
     public function testGetWeather()
     {
-        // 创建模拟接口响应
         $response = new Response(200, [], '{"success": true}');
-        // 创建模拟HTTP Client
         $client = \Mockery::mock(Client::class);
-        // 指定将会产生的行为（在后续的测试中将会按照下面的参数来调用）。
-        $client->allows()->get('https://restapi.amap.com/v3/weather/weatherInfo',[
+        $client->allows()->get('https://restapi.amap.com/v3/weather/weatherInfo', [
             'query' => [
                 'key' => 'mock-key',
-                'city'  => '哈尔滨',
-                'output'    =>  'json',
-                'extensions'=>  'base',
+                'city' => '230100',
+                'output' =>  'json',
+                'extensions' => 'base',
             ],
         ])->andReturn($response);
 
-        // 将 `getHttpClient` 方法替换为上面创建的 http client
         $w = \Mockery::mock(Weather::class, ['mock-key'])->makePartial();
         $w->allows()->getHttpClient()->andReturn($client);
 
         // 断言 `getWeather` 方法返回值为模拟接口的返回值
-        $this->assertSame(['success' => true], $w->getWeather('哈尔滨'));
+        $this->assertSame(['success' => true], $w->getWeather('230100'));
 
         // xml
         $response = new Response(200, [], '<hello>content</hello>');
         $client = \Mockery::mock(Client::class);
-        $client->allows()->get('https://restapi.amap.com/v3/weather/weatherInfo',[
+        $client->allows()->get('https://restapi.amap.com/v3/weather/weatherInfo', [
             'query' => [
                 'key' => 'mock-key',
-                'city'  => '哈尔滨',
-                'output'    =>  'xml',
-                'extensions'=>  'all',
+                'city' => '230100',
+                'extensions' => 'all',
+                'output' => 'xml',
             ],
         ])->andReturn($response);
 
         $w = \Mockery::mock(Weather::class, ['mock-key'])->makePartial();
         $w->allows()->getHttpClient()->andReturn($client);
 
-        $this->assertSame('<hello>content</hello>', $w->getWeather('哈尔滨', 'all', 'xml'));
+        $this->assertSame('<hello>content</hello>', $w->getWeather('230100', 'all', 'xml'));
     }
 
     public function testGetHttpClient()
